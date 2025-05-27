@@ -6,6 +6,11 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.post('/register', authCtrl.register);
 router.post('/login', authCtrl.login);
 
+router.get("/test", (req, res) => {
+  res.json({ message: "Test successful!" });
+});
+
+
 router.get('/profile', authMiddleware, (req, res) => {
   res.json({ user: req.user }); 
 });
