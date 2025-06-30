@@ -4,32 +4,53 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const Document = require('../models/document');
 const gTTS = require('gtts');
+const cloudinary = require('../config/cloudinary')
+
+
 
 exports.uploadDocument = async (req, res) => {
   const files = req.files;
   const userId = req.user.id;
 
-  if (!files || files.length === 0)
+  if (!files || files.length === 0) {
     return res.status(400).json({ message: 'No files uploaded' });
+  }
 
   const savedDocs = [];
 
   for (const file of files) {
     const ext = path.extname(file.originalname).toLowerCase();
     let text = '';
+    let cloudinaryUrl = '';
 
     try {
+      // Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: 'dms_documents',
+        resource_type: 'auto',
+      });
+
+      cloudinaryUrl = result.secure_url;
+
+      // Fetch the file from Cloudinary
+      const response = await axios.get(cloudinaryUrl, {
+        responseType: 'arraybuffer',
+      });
+
+      const buffer = Buffer.from(response.data);
+
+      // Extract text based on file type
       if (ext === '.pdf') {
-        const dataBuffer = fs.readFileSync(file.path);
-        const data = await pdfParse(dataBuffer);
+        const data = await pdfParse(buffer);
         text = data.text;
       } else if (ext === '.docx') {
-        const data = await mammoth.extractRawText({ path: file.path });
-        text = data.value;
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value;
       }
 
+      // Save to MongoDB
       const doc = new Document({
-        filename: file.filename,
+        cloudinaryUrl,
         originalName: file.originalname,
         fileType: ext,
         text,
@@ -37,13 +58,15 @@ exports.uploadDocument = async (req, res) => {
         size: file.size,
         uploadDate: new Date(),
         mimetype: file.mimetype,
-        path: file.path
       });
 
       await doc.save();
       savedDocs.push(doc);
+
+      // Cleanup temp local file
+      fs.unlinkSync(file.path);
     } catch (err) {
-      console.error(`Failed to process file: ${file.originalname}`, err);
+      console.error(`❌ Failed to process file: ${file.originalname}`, err);
     }
   }
 
