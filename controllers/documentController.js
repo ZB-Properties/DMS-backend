@@ -7,6 +7,7 @@ const Document = require('../models/document');
 const gTTS = require('gtts');
 const cloudinary = require('../config/cloudinary');
 
+
 exports.uploadDocument = async (req, res) => {
   const files = req.files;
   const userId = req.user.id;
@@ -18,53 +19,39 @@ exports.uploadDocument = async (req, res) => {
   const savedDocs = [];
 
   for (const file of files) {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = '.' + file.originalname.split('.').pop().toLowerCase(); // extract file extension
     let text = '';
-    let cloudinaryUrl = '';
 
     try {
- 
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: 'dms_documents',
-        resource_type: 'auto',
-      });
+      const fileUrl = file.path; // Cloudinary URL from multer-storage-cloudinary
 
-      cloudinaryUrl = result.secure_url;
-
-  
-      const response = await axios.get(cloudinaryUrl, { responseType: 'arraybuffer' });
+      // Fetch file from Cloudinary
+      const axios = require('axios');
+      const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(response.data);
 
+      // Extract text
       if (ext === '.pdf') {
-        const data = await pdfParse(buffer);
+        const data = await require('pdf-parse')(buffer);
         text = data.text;
       } else if (ext === '.docx') {
-        const data = await mammoth.extractRawText({ buffer });
-        text = data.value;
+        const result = await require('mammoth').extractRawText({ buffer });
+        text = result.value;
       }
 
-      // Save to DB
       const doc = new Document({
-        cloudinaryUrl,
+        cloudinaryUrl: fileUrl,
         originalName: file.originalname,
         fileType: ext,
+        mimetype: file.mimetype,
+        size: file.size,
         text,
         user: userId,
-        size: file.size,
         uploadDate: new Date(),
-        mimetype: file.mimetype,
       });
 
       await doc.save();
       savedDocs.push(doc);
-
-    
-      try {
-        fs.unlinkSync(file.path);
-      } catch (err) {
-        console.warn(`Could not delete temp file: ${file.path}`);
-      }
-
     } catch (err) {
       console.error(`❌ Failed to process file: ${file.originalname}`, err);
     }
@@ -72,6 +59,7 @@ exports.uploadDocument = async (req, res) => {
 
   res.status(201).json({ message: 'Files uploaded', documents: savedDocs });
 };
+
 
 exports.getDocuments = async (req, res) => {
   try {
