@@ -1,63 +1,68 @@
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios'); 
-const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
-const Document = require('../models/document');
-const gTTS = require('gtts');
-const cloudinary = require('../config/cloudinary');
-
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
+const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+const Document = require("../models/document");
+const { cloudinary } = require("../config/cloudinary");
 
 exports.uploadDocument = async (req, res) => {
   const files = req.files;
   const userId = req.user.id;
 
   if (!files || files.length === 0) {
-    return res.status(400).json({ message: 'No files uploaded' });
+    return res.status(400).json({ message: "No files uploaded" });
   }
 
   const savedDocs = [];
 
   for (const file of files) {
-    const ext = '.' + file.originalname.split('.').pop().toLowerCase(); // extract file extension
-    let text = '';
+    const ext = path.extname(file.originalname).toLowerCase();
+    let text = "";
+    let cloudinaryUrl = "";
 
     try {
-      const fileUrl = file.path; // Cloudinary URL from multer-storage-cloudinary
-
-      // Fetch file from Cloudinary
-      const axios = require('axios');
-      const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(response.data);
+      const fileBuffer = fs.readFileSync(file.path);
 
       // Extract text
-      if (ext === '.pdf') {
-        const data = await require('pdf-parse')(buffer);
-        text = data.text;
-      } else if (ext === '.docx') {
-        const result = await require('mammoth').extractRawText({ buffer });
+      if (ext === ".pdf") {
+        const parsed = await pdfParse(fileBuffer);
+        text = parsed.text;
+      } else if (ext === ".docx") {
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
         text = result.value;
       }
 
+      // Upload to Cloudinary
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "dms_documents",
+        resource_type: "auto",
+      });
+
+      cloudinaryUrl = result.secure_url;
+
       const doc = new Document({
-        cloudinaryUrl: fileUrl,
+        cloudinaryUrl,
         originalName: file.originalname,
         fileType: ext,
-        mimetype: file.mimetype,
-        size: file.size,
         text,
         user: userId,
+        size: file.size,
+        mimetype: file.mimetype,
         uploadDate: new Date(),
       });
 
       await doc.save();
       savedDocs.push(doc);
+
+      // Clean up local file
+      fs.unlinkSync(file.path);
     } catch (err) {
       console.error(`❌ Failed to process file: ${file.originalname}`, err);
     }
   }
 
-  res.status(201).json({ message: 'Files uploaded', documents: savedDocs });
+  res.status(201).json({ message: "Files uploaded", documents: savedDocs });
 };
 
 
@@ -66,9 +71,11 @@ exports.getDocuments = async (req, res) => {
     const docs = await Document.find({ user: req.user.id }).sort({ uploadDate: -1 });
     res.json(docs);
   } catch (err) {
-    res.status(500).json({ message: 'Failed to fetch documents' });
+    console.error("❌ Failed to fetch documents", err);
+    res.status(500).json({ message: "Failed to fetch documents" });
   }
 };
+
 
 exports.getDocumentById = async (req, res) => {
   try {
