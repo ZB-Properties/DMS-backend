@@ -2,7 +2,13 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/uploadMiddleware');
 const authMiddleware = require('../middleware/authMiddleware');
-const docCtrl = require('../controllers/documentController');
+const {
+  uploadDocument,
+  getDocuments,
+  getDocumentById,
+  deleteDocument,
+  getAudioFromDocument
+} = require('../controllers/documentController');
 
 
 
@@ -32,7 +38,7 @@ const docCtrl = require('../controllers/documentController');
  *       201:
  *         description: Documents uploaded
  */
-router.post("/", authMiddleware, upload.array("files"), docCtrl.uploadDocument);
+router.post("/", authMiddleware, upload.array("files"), uploadDocument);
 
 /**
  * @swagger
@@ -46,7 +52,7 @@ router.post("/", authMiddleware, upload.array("files"), docCtrl.uploadDocument);
  *       200:
  *         description: List of documents
  */
-router.get("/", authMiddleware, docCtrl.getDocuments);
+router.get("/", authMiddleware, getDocuments);
 
 /**
  * @swagger
@@ -66,7 +72,7 @@ router.get("/", authMiddleware, docCtrl.getDocuments);
  *       200:
  *         description: Document content
  */
-router.get("/:id", authMiddleware, docCtrl.getDocumentById);
+router.get("/:id", authMiddleware, getDocumentById);
 
 /**
  * @swagger
@@ -101,7 +107,7 @@ router.get("/:id", authMiddleware, docCtrl.getDocumentById);
  *         description: Server error
  */
 
-router.get('/audio/:id', authMiddleware, docCtrl.getAudioFromDocument);
+router.get('/audio/:id', authMiddleware, getAudioFromDocument);
 
 /**
  * @swagger
@@ -121,6 +127,6 @@ router.get('/audio/:id', authMiddleware, docCtrl.getAudioFromDocument);
  *       200:
  *         description: Document deleted
  */
-router.delete("/:id", authMiddleware, docCtrl.deleteDocument);
+router.delete("/:id", authMiddleware, deleteDocument);
 
 module.exports = router;
