@@ -24,7 +24,6 @@ exports.uploadDocument = async (req, res) => {
     try {
       const fileBuffer = fs.readFileSync(file.path);
 
-      // Extract text
       if (ext === ".pdf") {
         const parsed = await pdfParse(fileBuffer);
         text = parsed.text;
@@ -33,7 +32,6 @@ exports.uploadDocument = async (req, res) => {
         text = result.value;
       }
 
-      // Upload to Cloudinary
       const result = await cloudinary.uploader.upload(file.path, {
         folder: "dms_documents",
         resource_type: "auto",
@@ -55,7 +53,7 @@ exports.uploadDocument = async (req, res) => {
       await doc.save();
       savedDocs.push(doc);
 
-      // Clean up local file
+      
       fs.unlinkSync(file.path);
     } catch (err) {
       console.error(`❌ Failed to process file: ${file.originalname}`, err);
