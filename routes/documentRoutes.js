@@ -11,17 +11,21 @@ const {
 } = require('../controllers/documentController');
 
 
+/**
+ * @swagger
+ * tags:
+ *   name: Documents
+ *   description: Document management and processing
+ */
 
 /**
  * @swagger
  * /api/documents:
  *   post:
- *     summary: Upload documents
+ *     summary: Upload one or more documents (PDF/DOCX)
  *     tags: [Documents]
  *     security:
  *       - bearerAuth: []
- *     consumes:
- *       - multipart/form-data
  *     requestBody:
  *       required: true
  *       content:
@@ -36,7 +40,13 @@ const {
  *                   format: binary
  *     responses:
  *       201:
- *         description: Documents uploaded
+ *         description: Documents uploaded successfully
+ *       400:
+ *         description: No files uploaded
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
 router.post("/", authMiddleware, upload.array("files"), uploadDocument);
 
@@ -44,13 +54,17 @@ router.post("/", authMiddleware, upload.array("files"), uploadDocument);
  * @swagger
  * /api/documents:
  *   get:
- *     summary: Get all documents
+ *     summary: Get all uploaded documents for the authenticated user
  *     tags: [Documents]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of documents
+ *         description: List of user documents
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to fetch documents
  */
 router.get("/", authMiddleware, getDocuments);
 
@@ -66,39 +80,12 @@ router.get("/", authMiddleware, getDocuments);
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Document content
- */
-router.get("/:id", authMiddleware, getDocumentById);
-
-/**
- * @swagger
- * /api/documents/audio/{id}:
- *   get:
- *     summary: Convert document text to audio
- *     tags: [Documents]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
  *         description: Document ID
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Audio stream returned
- *         content:
- *           audio/mpeg:
- *             schema:
- *               type: string
- *               format: binary
- *       400:
- *         description: Invalid ID or conversion error
+ *         description: Document data
  *       401:
  *         description: Unauthorized
  *       404:
@@ -106,7 +93,40 @@ router.get("/:id", authMiddleware, getDocumentById);
  *       500:
  *         description: Server error
  */
+router.get("/:id", authMiddleware, getDocumentById);
 
+/**
+ * @swagger
+ * /api/documents/audio/{id}:
+ *   get:
+ *     summary: Convert a document’s text content into an audio stream (text-to-speech)
+ *     tags: [Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Document ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: MP3 audio stream returned
+ *         content:
+ *           audio/mpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: Invalid ID or text-to-speech conversion error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Document not found or no text available
+ *       500:
+ *         description: Server error
+ */
 router.get('/audio/:id', authMiddleware, getAudioFromDocument);
 
 /**
@@ -121,11 +141,18 @@ router.get('/audio/:id', authMiddleware, getAudioFromDocument);
  *       - in: path
  *         name: id
  *         required: true
+ *         description: Document ID to delete
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Document deleted
+ *         description: Document deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Document not found
+ *       500:
+ *         description: Failed to delete document
  */
 router.delete("/:id", authMiddleware, deleteDocument);
 
