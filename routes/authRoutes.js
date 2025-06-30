@@ -1,5 +1,5 @@
 const express = require("express");
-const authCtrl = require("../controllers/authController");
+const { register, login } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
@@ -25,7 +25,7 @@ const router = express.Router();
  *       201:
  *         description: User registered successfully
  */
-router.post("/register", authCtrl.register);
+router.post("/register", register);
 
 /**
  * @swagger
@@ -48,7 +48,7 @@ router.post("/register", authCtrl.register);
  *       200:
  *         description: Login successful
  */
-router.post("/login", authCtrl.login);
+router.post("/login", login);
 
 /**
  * @swagger
