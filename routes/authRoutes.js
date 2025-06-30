@@ -62,6 +62,9 @@ router.post("/login", login);
  *       200:
  *         description: User profile fetched
  */
-router.get("/profile", authMiddleware);
+router.get("/profile", authMiddleware,(req, res) => {
+  res.json({ user: req.user }); 
+});
+
 
 module.exports = router;
