@@ -1,14 +1,67 @@
-const express = require('express');
+const express = require("express");
+const authCtrl = require("../controllers/authController");
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
-const authCtrl = require('../controllers/authController');
-const authMiddleware = require('../middleware/authMiddleware');
 
-router.post('/register', authCtrl.register);
-router.post('/login', authCtrl.login);
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ */
+router.post("/register", authCtrl.register);
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ */
+router.post("/login", authCtrl.login);
 
-router.get('/profile', authMiddleware, (req, res) => {
-  res.json({ user: req.user }); 
-});
+/**
+ * @swagger
+ * /api/auth/profile:
+ *   get:
+ *     summary: Get user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile fetched
+ */
+router.get("/profile", authMiddleware);
 
 module.exports = router;
